@@ -26,14 +26,25 @@ public class Controller : MonoBehaviour
     private float velocityVSUp;
     private float driftBoostTimer;
 
-    private bool canDrive=true;
+    public bool canDrive = true;
     private bool offRoad;
     private bool isDrifting;
     private bool driftActivated;
 
+    [SerializeField]
+    private GameObject particles;
+    public static Controller instance;
+    private void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+    }
     // Start is called before the first frame update
     void Start()
     {
+        particles.SetActive(false);
         body = GetComponent<Rigidbody2D>();   
     }
 
@@ -81,27 +92,44 @@ public class Controller : MonoBehaviour
             }
             if (isDrifting && !driftActivated && steeringInput != 0)//activate drift
             {
+                particles.SetActive(true);
                 driftPower = .9f;
                 steerPower = 2.5f;
                 driftActivated = true;
             }
             else if ((!isDrifting && driftActivated) || steeringInput == 0)//deactivate drift
             {
+                particles.SetActive(false);
                 driftPower = .5f;
                 steerPower = 1.5f;
                 driftActivated = false;
             }
             if (driftActivated)
             {
-
+                if (driftBoostTimer > 1)
+                {
+                    particles.GetComponent<ParticleSystem>().startColor = Color.yellow;
+                }
+                else
+                {
+                    particles.GetComponent<ParticleSystem>().startColor = Color.gray;
+                }
+                driftBoostTimer += Time.deltaTime;
             }
             else
             {
-
+                if (driftBoostTimer > 1)
+                {
+                    applySpeedBoost();
+                }
+                driftBoostTimer = 0;
             }
+       
+            
         }
         else
         {
+
             body.velocity = Vector2.zero;
         }
         /**
@@ -115,6 +143,11 @@ public class Controller : MonoBehaviour
         }
         body.MoveRotation(body.rotation + (-steeringInput * steerPower));
         **/
+    }
+
+    private void applySpeedBoost()
+    {
+        body.AddForce(transform.up * 15, ForceMode2D.Impulse);
     }
 
     private void killOrthogonalVelocity()
@@ -178,6 +211,10 @@ public class Controller : MonoBehaviour
         if (collision.CompareTag("Boost"))
         {
             body.AddForce(boostForce * transform.up, ForceMode2D.Force);
+        }
+        if (collision.CompareTag("FinishLine"))
+        {
+            gameManager.instance.addLap();
         }
     }
 }
